@@ -848,8 +848,6 @@ def user_management():
                 COALESCE(u.department, '') AS department,
                 COALESCE(u.account_status, 'active') AS account_status,
                 COALESCE(u.is_admin, 0) AS is_admin,
-                COALESCE(u.created_at, '') AS created_at,
-                COALESCE(u.updated_at, '') AS updated_at,
                 u.last_login,
                 COALESCE(uc.consent_status, 'Unknown') AS consent_status,
                 COALESCE(uc.consent_date, '') AS consent_date
@@ -4009,11 +4007,10 @@ def edit_user(user_id):
             cursor.execute('''
                 UPDATE users SET 
                     username = ?, first_name = ?, last_name = ?, employee_id = ?,
-                    user_role = ?, department = ?, account_status = ?, is_admin = ?,
-                    updated_at = ?
+                    user_role = ?, department = ?, account_status = ?, is_admin = ?
                 WHERE id = ?
             ''', (username, first_name, last_name, employee_id, user_role, 
-                  department, account_status, is_admin, current_time, user_id))
+                  department, account_status, is_admin, user_id))
             
             # Update consent status if changed
             cursor.execute('''
@@ -4070,8 +4067,8 @@ def toggle_user_status(user_id):
         # Update user status
         current_time = get_local_time().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute('''
-            UPDATE users SET account_status = ?, updated_at = ? WHERE id = ?
-        ''', (new_status, current_time, user_id))
+            UPDATE users SET account_status = ? WHERE id = ?
+        ''', (new_status, user_id))
         
         db.commit()
         
@@ -4470,8 +4467,6 @@ def user_options(user_id):
                 COALESCE(u.department, '') AS department,
                 COALESCE(u.account_status, 'active') AS account_status,
                 COALESCE(u.is_admin, 0) AS is_admin,
-                COALESCE(u.created_at, '') AS created_at,
-                COALESCE(u.updated_at, '') AS updated_at,
                 u.last_login,
                 COALESCE(uc.consent_status, 'pending') AS consent_status,
                 COALESCE(uc.consent_date, '') AS consent_date
@@ -4507,14 +4502,7 @@ def user_options(user_id):
         }
         user_data['role_display'] = role_display.get(user_data['user_role'], user_data['user_role'])
         
-        # Parse datetime fields safely
-        if user_data['created_at']:
-            try:
-                parsed_date = try_parse(user_data['created_at'])
-                if parsed_date:
-                    user_data['created_at'] = parsed_date
-            except:
-                pass
+        # Parse datetime fields safely (created_at field doesn't exist in current schema)
         
         if user_data['last_login']:
             try:
@@ -4566,8 +4554,8 @@ def update_user_status(user_id):
         # Update user status
         current_time = get_local_time().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute('''
-            UPDATE users SET account_status = ?, updated_at = ? WHERE id = ?
-        ''', (new_status, current_time, user_id))
+            UPDATE users SET account_status = ? WHERE id = ?
+        ''', (new_status, user_id))
         
         db.commit()
         
@@ -4621,8 +4609,8 @@ def generate_temp_password(user_id):
         # Update user password
         current_time = get_local_time().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute('''
-            UPDATE users SET password = ?, updated_at = ? WHERE id = ?
-        ''', (hashed_password, current_time, user_id))
+            UPDATE users SET password = ? WHERE id = ?
+        ''', (hashed_password, user_id))
         
         db.commit()
         
@@ -4662,7 +4650,7 @@ def export_user_data(user_id):
             SELECT 
                 u.id, u.username, u.first_name, u.last_name, u.employee_id,
                 u.user_role, u.department, u.account_status, u.is_admin,
-                u.created_at, u.updated_at, u.last_login,
+                u.last_login,
                 COALESCE(uc.consent_status, 'Unknown') AS consent_status,
                 COALESCE(uc.consent_date, '') AS consent_date
             FROM users u
@@ -4703,7 +4691,7 @@ def export_user_data(user_id):
         output.write(f"Abteilung,{user['department'] or ''}\n")
         output.write(f"Kontostatus,{user['account_status']}\n")
         output.write(f"Administrator,{'Ja' if user['is_admin'] else 'Nein'}\n")
-        output.write(f"Erstellt am,{user['created_at']}\n")
+        output.write(f"Erstellt am,Nicht verfügbar\n")
         output.write(f"Letzter Login,{user['last_login'] or 'Nie'}\n")
         output.write(f"Datenschutz-Einwilligung,{user['consent_status']}\n")
         output.write(f"Einwilligung am,{user['consent_date']}\n")
